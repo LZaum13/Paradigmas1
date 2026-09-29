@@ -8,19 +8,19 @@ type Tabuleiro = [Linha]
 type Dicas = ([Int], [Int], [Int], [Int])
 
 -- recebe uma lista de Int, um Int, e retorna um Int
-ContaPredio :: [Int] -> Int -> Int
+contaPredio :: [Int] -> Int -> Int
 
 -- Caso base: Lista vazia []. O caractere '_' é um "coringa" isolado
 -- que ignora o parâmetro maiorVisto, já que não importa.
-ContaPredio [] _ = 0
+contaPredio [] _ = 0
 
 -- Caso recursivo: Separamos o primeiro prédio (a) do resto (b)
-ContaPredio (a:b) maiorVisto
-  | (a > maiorVisto) = 1 + (ContaPredio b a)
-  | otherwise        = ContaPredio b maiorVisto
+contaPredio (a:b) maiorVisto
+  | (a > maiorVisto) = 1 + (contaPredio b a)
+  | otherwise        = contaPredio b maiorVisto
 
 linhasValidas :: [[Int]] -> Int -> [[Int]]
-linhasValidas todasLinhas dica = [linha | linha <- todasLinhas, (ContaPredio linha 0) == dica]
+linhasValidas todasLinhas dica = [linha | linha <- todasLinhas, (contaPredio linha 0) == dica]
 
 -- Função para medir a lista
 comprimento :: [Int] -> Int
@@ -81,12 +81,14 @@ inverte (a:b) = inverte b ++ [a]
 -- valida se a linha bate com as dicas das duas pontas
 validaDicaLinha :: [Int] -> Int -> Int -> Bool
 validaDicaLinha linha dicaEsq dicaDir =
-    (ContaPredio linha 0 == dicaEsq) && (ContaPredio (inverte linha) 0 == dicaDir)
+    (contaPredio linha 0 == dicaEsq) && (contaPredio (inverte linha) 0 == dicaDir)
 
 -- Recebe as colunas transpostas e as listas de dicas do Norte e do Sul
 validaDicaColunas :: [[Int]] -> [Int] -> [Int] -> Bool
-validaDicaColunas [] _ _ = True
-validaDicaColunas _ [] _ = True
+validaDicaColunas [] [] [] = True
+validaDicaColunas [] _ _ = False
+validaDicaColunas _ [] _ = False
+validaDicaColunas _ _ [] = False
 validaDicaColunas (col:restoCols) (dN:restoDN) (dS:restoDS)
   | validaDicaLinha col dN dS == True = validaDicaColunas restoCols restoDN restoDS
   | otherwise = False
@@ -97,42 +99,42 @@ resolverArranhaceus dicasNorte dicasSul dicasOeste dicasLeste =
   [ [l1, l2, l3, l4, l5, l6] |
       
       -- 1. Gera a primeira linha e testa  as dicas laterais
-      l1 <- permutacoes [1..6]
-      validaVisibilidadeLinha l1 (dicasOeste !! 0) (dicasLeste !! 0),
+      l1 <- permutacoes [1..6],
+      validaDicaLinha l1 (dicasOeste !! 0) (dicasLeste !! 0),
       
       -- 2. Gera a segunda linha, testa as dicas laterais e a validação de não repetição
       l2 <- permutacoes [1..6], 
-      validaVisibilidadeLinha l2 (dicasOeste !! 1) (dicasLeste !! 1),
+      validaDicaLinha l2 (dicasOeste !! 1) (dicasLeste !! 1),
       tabuleiroValido (l1:l2:[]),
     
       l3 <- permutacoes [1..6], 
-      validaVisibilidadeLinha l3 (dicasOeste !! 2) (dicasLeste !! 2),
+      validaDicaLinha l3 (dicasOeste !! 2) (dicasLeste !! 2),
       tabuleiroValido (l1:l2:l3:[]),
       
       l4 <- permutacoes [1..6], 
-      validaVisibilidadeLinha l4 (dicasOeste !! 3) (dicasLeste !! 3),
+      validaDicaLinha l4 (dicasOeste !! 3) (dicasLeste !! 3),
       tabuleiroValido (l1:l2:l3:l4:[]),
       
       l5 <- permutacoes [1..6], 
-      validaVisibilidadeLinha l5 (dicasOeste !! 4) (dicasLeste !! 4),
+      validaDicaLinha l5 (dicasOeste !! 4) (dicasLeste !! 4),
       tabuleiroValido (l1:l2:l3:l4:l5:[]),
       
       l6 <- permutacoes [1..6], 
-      validaVisibilidadeLinha l6 (dicasOeste !! 5) (dicasLeste !! 5),
+      validaDicaLinha l6 (dicasOeste !! 5) (dicasLeste !! 5),
       tabuleiroValido (l1:l2:l3:l4:l5:l6:[]),
       
       -- 7. VALIDAÇÃO FINAL: Matriz preenchida. Transpomos para testar Norte e Sul.
       -- O let serve para vincular valores a um nome dentro do bloco.
-      let colunas = transpor (l1:l2:l3:l4:l5:l6:[])
-      validaVisibilidadeColunas colunas dicasNorte dicasSul
+      let colunas = transpor (l1:l2:l3:l4:l5:l6:[]),
+      validaDicaColunas colunas dicasNorte dicasSul
   ]
 
-  main = do
-  --dicas para um puzzle 6x6.
-  let norte = [2, 1, 3, 4, 2, 2]
-  let sul   = [2, 3, 2, 1, 4, 2]
-  let oeste = [3, 2, 4, 1, 2, 3]
-  let leste = [2, 2, 1, 5, 3, 2]
-  
-  -- printa o tabuleiro resolvido
-  print (resolverWolkenkratzer norte sul oeste leste)
+main = do
+    --dicas para um puzzle 6x6.
+    let norte = [2, 1, 3, 4, 2, 2]
+    let sul   = [2, 3, 2, 1, 4, 2]
+    let oeste = [3, 2, 4, 1, 2, 3]
+    let leste = [2, 2, 1, 5, 3, 2]
+
+    -- printa o tabuleiro resolvido
+    print (resolverArranhaceus norte sul oeste leste)
