@@ -1,4 +1,4 @@
--- type para representar o tabuleiro do jogo Arranha-Céu
+-- tipo para representar o tabuleiro do jogo Arranha-Céu
 type Linha = [Int]
 type Tabuleiro = [Linha]
 
@@ -8,8 +8,7 @@ type Dicas = ([Int], [Int], [Int], [Int])
 -- recebe uma lista de Int, um Int, e retorna um Int
 contaPredio :: [Int] -> Int -> Int
 
--- Caso base: Lista vazia []. O caractere '_' é um "coringa" isolado
--- que ignora o parâmetro maiorVisto, já que não importa.
+-- Lista Vazia[]: ignora o parâmetro maiorVisto, já que não importa.
 contaPredio [] _ = 0
 
 -- Caso recursivo: Separamos o primeiro prédio (a) do resto (b)
@@ -17,6 +16,7 @@ contaPredio (a:b) maiorVisto
   | (a > maiorVisto) = 1 + (contaPredio b a)
   | otherwise        = contaPredio b maiorVisto
 
+-- Recebe uma lista de linhas e uma dica, e retorna uma lista de linhas que batem com a dica
 linhasValidas :: [[Int]] -> Int -> [[Int]]
 linhasValidas todasLinhas dica = [linha | linha <- todasLinhas, (contaPredio linha 0) == dica]
 
@@ -25,12 +25,14 @@ comprimento :: [Int] -> Int
 comprimento [] = 0
 comprimento (_:b) = 1 + (comprimento b)
 
+-- Função para verificar se um elemento existe em uma lista
 existe :: Int -> [Int] -> Bool
 existe _ [] = False
 existe n (a:b)
   | n == a    = True
   | otherwise = existe n b
 
+-- Função para verificar se uma lista não tem elementos repetidos
 semRepeticao :: [Int] -> Bool
 semRepeticao [] = True
 semRepeticao (a:b)
@@ -58,6 +60,12 @@ validaLinha [] = True
 validaLinha (linha:resto)
   | semRepeticao linha == True = validaLinha resto
   | otherwise                  = False
+
+novaLinhaValida :: [Int] -> [[Int]] -> Bool
+novaLinhaValida [] _ = True
+novaLinhaValida (x:xs) colunas =
+  not (existe x (map cabeca colunas))
+  && novaLinhaValida xs (map cauda colunas)
 
 tabuleiroValido :: [[Int]] -> Bool
 tabuleiroValido matriz
@@ -104,9 +112,12 @@ resolverArranhaceus :: Int -> [Int] -> [Int] -> [Int] -> [Int] -> [Int] -> [[[In
 resolverArranhaceus tamanho numeros dicasNorte dicasSul dicasOeste dicasLeste =
   let 
     todasPerms = permutacoes numeros
-    
-    linhasValidasPorIndice i = [l | l <- todasPerms, validaDicaLinha l (dicasOeste !! i) (dicasLeste !! i)]
-    
+
+    linhasValidas =
+      [ [l | l <- todasPerms,
+            validaDicaLinha l (dicasOeste !! i) (dicasLeste !! i)]
+      | i <- [0..tamanho-1]
+      ]    
     busca linhaAtual matrizParcial
       | linhaAtual == tamanho = 
           let matrizCompleta = inverte matrizParcial
@@ -115,23 +126,33 @@ resolverArranhaceus tamanho numeros dicasNorte dicasSul dicasOeste dicasLeste =
           
       | otherwise = 
           [ solucaoFinal
-          | l <- linhasValidasPorIndice linhaAtual
-          , tabuleiroValido (l : matrizParcial)
+          | l <- linhasValidas !! linhaAtual
+          , novaLinhaValida l matrizParcial
           , solucaoFinal <- busca (linhaAtual + 1) (l : matrizParcial)
           ]
   in 
-    busca 0 []    
+    busca 0 []
+
+-- Formatação do tabuleiro para o print
+imprimeTabuleiro :: [[Int]] -> IO ()
+imprimeTabuleiro [] = return ()
+imprimeTabuleiro (linha:resto) = do
+  print linha
+  imprimeTabuleiro resto
 
 main = do
 
-  let tamanho = 4 -- NxN tabuleiro ex: (4x4)
-  let numeros = [1, 2, 3, 4] -- números de 1 a 4 para um tabuleiro 4x4
+  let tamanho = 6 -- NxN tabuleiro ex: (6x6)
+  let numeros = [1, 2, 3, 4, 5, 6] -- números de 1 a 6 para um tabuleiro 6x6
 
-  --dicas para um puzzle 4x4.
-  let norte = [4, 0, 0, 0]
-  let sul   = [0, 2, 2, 0]
-  let oeste = [0, 2, 2, 1]
-  let leste = [3, 2, 0, 0]
+  --dicas para um puzzle 6x6.
+  let norte = [2, 3, 2, 2, 1, 3]
+  let sul   = [3, 1, 3, 2, 4, 2]
+  let oeste = [5, 1, 3, 2, 4, 2]
+  let leste = [2, 3, 2, 1, 2, 2]
 
   -- printa o tabuleiro resolvido
-  print (resolverArranhaceus tamanho numeros norte sul oeste leste)
+  let solucoes = resolverArranhaceus tamanho numeros norte sul oeste leste
+  case solucoes of
+      [] -> putStrLn "Nenhuma solução encontrada."
+      (solucao:_) -> imprimeTabuleiro solucao
